@@ -27,6 +27,10 @@ public class Node {
             return;
         }
 
+        if (filesList.length == 0) {
+            System.out.println("A diretoria não tem ficheiros");
+        }
+
         for (File file : filesList) {
             try {
                 byte[] content = Files.readAllBytes(file.toPath());
@@ -45,7 +49,7 @@ public class Node {
 
     // Testes
     public static void main(String[] args) {
-        String path = "C:\\Users\\eduar\\OneDrive\\Documentos\\GitHub\\Projeto-PCD\\ProjetoPCD\\dl1";
+        String path = "C:\\Users\\eduar\\OneDrive\\Documentos\\GitHub\\Projeto-PCD\\ProjetoPCD\\dl3";
 
         Node node = new Node(path);
 
