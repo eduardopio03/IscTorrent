@@ -87,11 +87,19 @@ public class IscTorrent {
         frame.add(bottomPanel);
 
         connectButton.addActionListener(e -> openNodeConnection());
+        searchButton.addActionListener(e -> searchFiles());
+        downloadButton.addActionListener(e -> downloadFiles());
     }
 
     public void openNodeConnection() {
         NodeFrame nodeFrame = new NodeFrame(node);
         nodeFrame.open();
+    }
+
+    public void searchFiles() {
+    }
+
+    public void downloadFiles() {
     }
 
     public static void main(String[] args) {
