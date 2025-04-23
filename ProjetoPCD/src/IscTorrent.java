@@ -1,10 +1,7 @@
 
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
-
 import javax.swing.*;
 
 public class IscTorrent {
@@ -88,14 +85,13 @@ public class IscTorrent {
         // Adicionar tudo na frame principal
         frame.add(topPanel, BorderLayout.NORTH);
         frame.add(bottomPanel);
-        connectButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                NodeFrame nodeFrame = new NodeFrame(node);
-                nodeFrame.open();
-            }
 
-        });
+        connectButton.addActionListener(e -> openNodeConnection());
+    }
+
+    public void openNodeConnection() {
+        NodeFrame nodeFrame = new NodeFrame(node);
+        nodeFrame.open();
     }
 
     public static void main(String[] args) {
