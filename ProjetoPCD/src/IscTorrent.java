@@ -1,5 +1,10 @@
 
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.IOException;
+
 import javax.swing.*;
 
 public class IscTorrent {
@@ -15,7 +20,27 @@ public class IscTorrent {
     private JButton downloadButton;
     private JButton connectButton;
 
-    public IscTorrent() {
+    private Node node;
+
+    public IscTorrent(int port, String workDir) throws IOException {
+        File workDirFile = new File(workDir);
+
+        // Se for um caminho relativo, tenta ajustá-lo à raiz do projeto
+        if (!workDirFile.isAbsolute()) {
+            // Sobe da pasta onde o Java está a correr para a raiz do projeto
+            File projectRoot = new File(System.getProperty("user.dir")).getParentFile();
+            workDirFile = new File(projectRoot, workDir);
+        }
+
+        String absoluteWorkDir = workDirFile.getCanonicalPath();
+
+        if (!workDirFile.exists() || !workDirFile.isDirectory()) {
+            System.err.println("[ERRO] Diretório de trabalho não encontrado: " + absoluteWorkDir);
+            System.exit(1);
+        }
+        System.out.println("[INFO] Diretório de trabalho definido como: " + absoluteWorkDir);
+
+        this.node = new Node(absoluteWorkDir, port);
         frame = new JFrame("Aplicação de Pesquisa ");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(600, 300);
@@ -63,13 +88,31 @@ public class IscTorrent {
         // Adicionar tudo na frame principal
         frame.add(topPanel, BorderLayout.NORTH);
         frame.add(bottomPanel);
+        connectButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                NodeFrame nodeFrame = new NodeFrame(node);
+                nodeFrame.open();
+            }
 
+        });
     }
 
     public static void main(String[] args) {
+        if (args.length != 2) {
+            System.err.println("Uso: java IscTorrent <porto> <pasta>");
+            System.exit(1);
+        }
+        int port = Integer.parseInt(args[0]);
+        String folder = args[1];
+
         SwingUtilities.invokeLater(() -> {
-            IscTorrent iscTorrent = new IscTorrent();
-            iscTorrent.open();
+            try {
+                IscTorrent iscTorrent = new IscTorrent(port, folder);
+                iscTorrent.open();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         });
     }
 }
