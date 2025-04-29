@@ -14,6 +14,7 @@ public class NodeFrame {
     private JTextField textFieldPorta;
     private JButton buttonCancel;
     private JButton buttonOK;
+
     private Node node;
 
     public NodeFrame(Node node) {
@@ -31,7 +32,7 @@ public class NodeFrame {
 
     public void addFrameContent() {
         frame.setLayout(new GridLayout(1, 6, 5, 5));
-        labelEndereco = new JLabel("Endereco:");
+        labelEndereco = new JLabel("Endereço:");
         labelPorta = new JLabel("Porta:");
         textFieldEndereco = new JTextField();
         textFieldPorta = new JTextField();
@@ -50,7 +51,7 @@ public class NodeFrame {
         buttonOK.addActionListener(e -> {
             String host = textFieldEndereco.getText();
             int port = Integer.parseInt(textFieldPorta.getText());
-            node.connectToNode(host, port);  // <- aqui a ligação é feita
+            node.connectToNode(host, port); // Liga ao nó especificado
             frame.dispose();
         });
     }
