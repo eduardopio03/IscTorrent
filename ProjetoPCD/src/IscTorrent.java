@@ -6,7 +6,7 @@ import javax.swing.*;
 
 public class IscTorrent {
 
-    // Componentes principais da interface
+    // Componentes da interface
     private final JFrame frame;
     private JPanel topPanel;
     private JPanel bottomPanel;
@@ -32,10 +32,10 @@ public class IscTorrent {
         String absoluteWorkDir = workDirFile.getCanonicalPath();
 
         if (!workDirFile.exists() || !workDirFile.isDirectory()) {
-            System.err.println("[ERRO] Diretório de trabalho não encontrado: " + absoluteWorkDir);
+            System.err.println("[ERRO] Diretório não encontrado: " + absoluteWorkDir);
             System.exit(1);
         }
-        System.out.println("[INFO] Diretório de trabalho definido como: " + absoluteWorkDir);
+        System.out.println("[INFO] Diretório definido como: " + absoluteWorkDir);
 
         this.node = new Node(absoluteWorkDir, port);
         frame = new JFrame("Aplicação de Pesquisa ");
@@ -53,7 +53,7 @@ public class IscTorrent {
     public void addFrameContent() {
         frame.setLayout(new BorderLayout());
 
-        // Painel superior -> Contem a label, campo de texto e botao de pesquisa
+        // Painel superior -> Contém a label, campo de texto e botao de pesquisa
         topPanel = new JPanel(new GridLayout());
         label = new JLabel("Texto a procurar: ");
         textField = new JTextField();
@@ -68,7 +68,7 @@ public class IscTorrent {
         JList<String> resultList = new JList<>(listModel);
         JScrollPane scrollPane = new JScrollPane(resultList);
 
-        // Painel lateral direito -> Contem os botoes "Descarregar" e "Ligar no"
+        // Painel lateral direito -> Contem os botões "Descarregar" e "Ligar nó"
         rightPanel = new JPanel();
         rightPanel.setLayout(new GridLayout(2, 1, 5, 5));
         downloadButton = new JButton("Descarregar");
@@ -86,6 +86,7 @@ public class IscTorrent {
         frame.add(topPanel, BorderLayout.NORTH);
         frame.add(bottomPanel);
 
+        // Ações dos botões
         connectButton.addActionListener(e -> openNodeConnection());
         searchButton.addActionListener(e -> searchFiles());
         downloadButton.addActionListener(e -> downloadFiles());
@@ -97,9 +98,11 @@ public class IscTorrent {
     }
 
     public void searchFiles() {
+        // TO-DO
     }
 
     public void downloadFiles() {
+        // TO-DO
     }
 
     public static void main(String[] args) {

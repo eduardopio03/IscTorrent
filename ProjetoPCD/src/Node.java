@@ -18,17 +18,16 @@ public class Node {
     private final String workDir;
     private final int listenPort;
     private final Map<BigInteger, File> files = new ConcurrentHashMap<>();
-    private final Map<Socket, ObjectOutputStream> peers = new ConcurrentHashMap<>();
 
     public Node(String workDir, int listenPort) throws IOException {
         this.workDir = workDir;
         this.listenPort = listenPort;
-        System.out.println("[INFO] Incializar nó com diretoria: " + workDir + " e porta: " + listenPort);
+        System.out.println("[INFO] Incializar nó com diretório: " + workDir + " e porta: " + listenPort);
         readFiles();         // Leitura inicial dos ficheiros
-        startServer();       // Inicia o servidor para novas conexões
+        startServer();       // Inicia o servidor deste nó
     }
 
-    // Lê os ficheiros da pasta de trabalho e guarda no mapa
+    // Lê os ficheiros da pasta e guarda no mapa
     private void readFiles() {
         File folder = new File(workDir);
         File[] list = folder.listFiles(File::isFile);
@@ -44,7 +43,7 @@ public class Node {
                 byte[] hash = MessageDigest.getInstance("SHA-256").digest(data);
                 BigInteger key = new BigInteger(1, hash);
                 files.put(key, f);
-                System.out.println("[INFO] Ficheiro registado: " + f.getName() + " com chave " + key.toString(16));
+                System.out.println("[INFO] Ficheiro registado: " + f.getName());
             } catch (IOException | NoSuchAlgorithmException e) {
                 System.err.println("[ERRO] Falha ao processar ficheiro: " + f.getName() + " - " + e.getMessage());
             }
@@ -59,96 +58,59 @@ public class Node {
         new Thread(() -> {
             while (true) {
                 try {
-                    Socket sock = server.accept();
-                    System.out.println("[INFO] Nova ligação recebida de " + sock.getRemoteSocketAddress());
-                    negotiateConnection(sock);
+                    Socket socket = server.accept();
+                    System.out.println("[INFO] Nova ligação recebida de " + socket.getRemoteSocketAddress());
+                    handleConnection(socket);
                 } catch (IOException e) {
-                    System.err.println("[ERRO] Falha ao aceitar ligação: " + e.getMessage());
+                    System.err.println("[ERRO] Erro ao aceitar ligação: " + e.getMessage());
                 }
             }
         }).start();
     }
 
-    // 3. Handshake e criação de canal de objectos
-    private void negotiateConnection(Socket sock) {
+    // Handshake --> recebe NewConnectionRequest e responde igual
+    private void handleConnection(Socket socket) {
         new Thread(() -> {
-            try {
-                ObjectOutputStream out = new ObjectOutputStream(sock.getOutputStream());
-                ObjectInputStream in = new ObjectInputStream(sock.getInputStream());
+            try (ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream()); ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) {
 
-                // Lê pedido do peer
                 Object obj = in.readObject();
-                if (!(obj instanceof NewConnectionRequest)) {
-                    System.err.println("[ERRO] Pedido de ligação inválido de: " + sock.getRemoteSocketAddress());
-                    sock.close();
-                    return;
+                if (obj instanceof NewConnectionRequest req) {
+                    System.out.printf("[INFO] Pedido de ligação de %s:%d%n", req.getHost(), req.getPort());
+                    // Responde com os mesmos dados para confirmar
+                    String localHost = InetAddress.getLocalHost().getHostAddress();
+                    NewConnectionRequest reply = new NewConnectionRequest(localHost, listenPort);
+                    out.writeObject(reply);
+                    out.flush();
+                    System.out.println("[INFO] Ligação estabelecida com sucesso.");
+                } else {
+                    System.err.println("[ERRO] Mensagem inesperada durante handshake: " + obj);
                 }
-                NewConnectionRequest req = (NewConnectionRequest) obj;
-                System.out.printf("[INFO] Pedido de ligação recebido de %s:%d%n", req.getHost(), req.getPort());
-
-                // Guarda output stream para futuros envios
-                peers.put(sock, out);
-
-                // Envia o nosso pedido de volta
-                String localHost = InetAddress.getLocalHost().getHostAddress();
-                NewConnectionRequest reply = new NewConnectionRequest(localHost, listenPort);
-                out.writeObject(reply);
-                out.flush();
-
-                System.out.println("[INFO] Ligação estabelecida com sucesso com " + req.getHost() + ":" + req.getPort());
-                // ler outras mensagens do peer
-                listenPeer(in);
-
             } catch (IOException | ClassNotFoundException e) {
-                System.err.println("[ERRO] Falha no handshake com " + sock.getRemoteSocketAddress() + ": " + e.getMessage());
+                System.err.println("[ERRO] Erro no handshake: " + e.getMessage());
             }
         }).start();
     }
 
-    // Conectar ativamente a outro nó
+    // Ligação a outro nó manualmente
     public void connectToNode(String host, int port) {
         new Thread(() -> {
-            try {
-                System.out.printf("[INFO] A tentar ligar a %s:%d...%n", host, port);
-                Socket sock = new Socket(host, port);
-                ObjectOutputStream out = new ObjectOutputStream(sock.getOutputStream());
-                ObjectInputStream in = new ObjectInputStream(sock.getInputStream());
+            try (Socket sock = new Socket(host, port); ObjectOutputStream out = new ObjectOutputStream(sock.getOutputStream()); ObjectInputStream in = new ObjectInputStream(sock.getInputStream())) {
 
-                // Envia pedido
+                System.out.printf("[INFO] A tentar ligar a %s:%d...%n", host, port);
                 String localHost = InetAddress.getLocalHost().getHostAddress();
                 out.writeObject(new NewConnectionRequest(localHost, listenPort));
                 out.flush();
 
-                // Lê resposta
                 Object obj = in.readObject();
-                if (!(obj instanceof NewConnectionRequest)) {
-                    System.err.println("[ERRO] Resposta inválida recebida de " + host + ":" + port);
-                    sock.close();
-                    return;
+                if (obj instanceof NewConnectionRequest reply) {
+                    System.out.printf("[INFO] Ligação aceite por %s:%d%n", reply.getHost(), reply.getPort());
+                } else {
+                    System.err.println("[ERRO] Resposta inesperada: " + obj);
                 }
-                NewConnectionRequest reply = (NewConnectionRequest) obj;
-                System.out.printf("[INFO] Ligação aceite por %s:%d%n", reply.getHost(), reply.getPort());
-
-                peers.put(sock, out);
-                listenPeer(in);
-
             } catch (IOException | ClassNotFoundException e) {
-                System.err.println("[ERRO] Falha ao ligar a " + host + ":" + port + " - " + e.getMessage());
+                System.err.println("[ERRO] Não foi possível ligar a " + host + ":" + port + " - " + e.getMessage());
             }
         }).start();
-    }
-
-    // Loop de receção de mensagens do peer
-    private void listenPeer(ObjectInputStream in) {
-        try {
-            Object msg;
-            while ((msg = in.readObject()) != null) {
-                // Aqui tratarias WordSearchMessage, FileBlockRequestMessage, etc.
-                System.out.println("[RECEBIDO] Mensagem do peer: " + msg.toString());
-            }
-        } catch (IOException | ClassNotFoundException e) {
-            System.err.println("[ERRO] Ligação perdida ou mensagem inválida: " + e.getMessage()); // MODIFICADO
-        }
     }
 
     public Map<BigInteger, File> getFiles() {

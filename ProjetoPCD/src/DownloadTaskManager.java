@@ -16,7 +16,7 @@ public class DownloadTaskManager {
         long offset = 0;
 
         while (offset < fileSize) {
-            int length = (int) Math.min(BLOCK_SIZE, fileSize - offset);
+            int length = (int) Math.min(BLOCK_SIZE, fileSize - offset);     // Caso em que o tamanho do bloco é menor que o BLOCK_SIZE
             blockRequests.add(new FileBlockRequestMessage(fileName, offset, length));
             offset += length;
         }

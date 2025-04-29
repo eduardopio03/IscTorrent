@@ -3,7 +3,7 @@
 public class FileBlockRequestMessage {
 
     private String fileName;    // Nome do ficheiro
-    private long offset;        // Indice do byte do inicio do bloco
+    private long offset;        // Indice do byte do inÍcio do bloco
     private int length;         // Tamanho do bloco
 
     public FileBlockRequestMessage(String fileName, long offset, int length) {
