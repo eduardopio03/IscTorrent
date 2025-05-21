@@ -1,6 +1,8 @@
 // Identifica um bloco de um ficheiro
 
-public class FileBlockRequestMessage {
+import java.io.Serializable;
+
+public class FileBlockRequestMessage implements Serializable {
 
     private String fileName;    // Nome do ficheiro
     private long offset;        // Indice do byte do inÍcio do bloco

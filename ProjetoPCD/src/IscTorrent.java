@@ -2,6 +2,7 @@
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
 
@@ -20,6 +21,9 @@ public class IscTorrent {
     private DefaultListModel<String> listModel;
 
     private Node node;
+
+    // Armazenar resultados da última pesquisa
+    private List<FileSearchResult> lastSearchResults = new ArrayList<>();
 
     public IscTorrent(int port, String workDir) throws IOException {
         File workDirFile = new File(workDir);
@@ -109,7 +113,7 @@ public class IscTorrent {
         new Thread(() -> {
             try {
                 List<FileSearchResult> results = node.searchFiles(keyword);
-
+                lastSearchResults = results; // Guarda os resultados
                 // Agrupar por nome de ficheiro e contar quantos peers têm cada ficheiro
                 java.util.Map<String, Integer> fileCounts = new java.util.HashMap<>();
                 for (FileSearchResult res : results) {
@@ -130,7 +134,38 @@ public class IscTorrent {
     }
 
     public void downloadFiles() {
-        // TO-DO
+        JList<String> resultList = (JList<String>) ((JScrollPane) bottomPanel.getComponent(0)).getViewport().getView();
+        int selectedIndex = resultList.getSelectedIndex();
+        if (selectedIndex == -1) {
+            JOptionPane.showMessageDialog(frame, "Selecione um arquivo para download", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String selectedItem = listModel.getElementAt(selectedIndex);
+        // Remove o <numero> do final
+        String fileName = selectedItem.substring(0, selectedItem.lastIndexOf('<')).trim();
+
+        // Procura por todos os peers que têm o arquivo
+        List<FileSearchResult> sources = new ArrayList<>();
+        for (FileSearchResult result : lastSearchResults) {
+            if (result.getFileName().equals(fileName)) {
+                sources.add(result);
+            }
+        }
+
+        if (sources.isEmpty()) {
+            JOptionPane.showMessageDialog(frame, "Nenhuma fonte disponível para este arquivo", "Erro", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Usa o tamanho do primeiro resultado encontrado 
+        long fileSize = sources.get(0).getFileSize();
+
+        // Inicia o download
+        new Thread(() -> {
+            DownloadTaskManager downloadManager = new DownloadTaskManager(node.getWorkDir(), node);
+            downloadManager.startDownload(fileName, fileSize, sources);
+        }).start();
     }
 
     public static void main(String[] args) {

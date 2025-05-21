@@ -37,6 +37,10 @@ public class Node {
         peers.add(new PeerInfo(host, port));
     }
 
+    public String getWorkDir() {
+        return workDir;
+    }
+
     // Lê os ficheiros da pasta e guarda no mapa
     private void readFiles() {
         File folder = new File(workDir);
@@ -78,12 +82,12 @@ public class Node {
         }).start();
     }
 
-    // Handshake --> recebe NewConnectionRequest e responde
-    // ...existing code...
     private void handleConnection(Socket socket) {
         new Thread(() -> {
             try (ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream()); ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) {
                 Object obj = in.readObject();
+
+                // NewConnectionRequest
                 if (obj instanceof NewConnectionRequest req) {
                     System.out.printf("[INFO] Pedido de ligação de %s:%d%n", req.getHost(), req.getPort());
                     // Responde com os mesmos dados para confirmar
@@ -93,6 +97,8 @@ public class Node {
                     out.flush();
                     addPeer(req.getHost(), req.getPort());
                     System.out.println("[INFO] Ligação estabelecida com sucesso.");
+
+                    // WordSearchMessage    
                 } else if (obj instanceof WordSearchMessage wsm) {
                     // Pesquisa ficheiros locais e responde com a lista de resultados
                     List<FileSearchResult> results = new ArrayList<>();
@@ -105,11 +111,15 @@ public class Node {
                                     f.getName(),
                                     listenPort,
                                     InetAddress.getLocalHost().getHostAddress()));
+                            System.out.println(f.getName());
+                            System.out.println(f.length());
                         }
                     }
                     out.writeObject(results);
                     out.flush();
                     System.out.println("[INFO] Pesquisa recebida e respondida.");
+                } else if (obj instanceof FileBlockRequestMessage blockRequest) {
+                    handleBlockRequest(blockRequest, out);
                 } else {
                     System.err.println("[ERRO] Mensagem inesperada durante handshake: " + obj);
                 }
@@ -118,9 +128,58 @@ public class Node {
             }
         }).start();
     }
-// ...existing code...
-    // Ligação a outro nó manualmente
 
+    private void handleBlockRequest(FileBlockRequestMessage request, ObjectOutputStream out) throws IOException {
+        String fileName = request.getFileName();
+        long offset = request.getOffset();
+        int length = request.getLength();
+
+        // Procura o ficheiro localmente
+        File requestedFile = null;
+        for (File file : files.values()) {
+            if (file.getName().equals(fileName)) {
+                requestedFile = file;
+                break;
+            }
+        }
+
+        if (requestedFile == null) {
+            System.err.println("[ERRO] Ficheiro solicitado não encontrado: " + fileName);
+            // Envia resposta vazia
+            out.writeObject(new FileBlockAnswerMessage(fileName, offset, new byte[0]));
+            out.flush();
+            return;
+        }
+
+        try {
+            // Le o bloco solicitado
+            byte[] data = new byte[length];
+            try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(requestedFile, "r")) {
+                raf.seek(offset);
+                int bytesRead = raf.read(data, 0, length);
+
+                // Se leu menos bytes que o solicitadom ajusta o array
+                if (bytesRead < length) {
+                    byte[] trimmedData = new byte[bytesRead];
+                    System.arraycopy(data, 0, trimmedData, 0, bytesRead);
+                    data = trimmedData;
+                }
+            }
+            // Envia resposta
+            FileBlockAnswerMessage response = new FileBlockAnswerMessage(fileName, offset, data);
+            out.writeObject(response);
+            out.flush();
+
+            System.out.println("[INFO] Bloco enviado: " + fileName + " (offset=" + offset + ", length=" + data.length + ")");
+        } catch (IOException e) {
+            System.err.println("[ERRO] Falha ao ler bloco: " + e.getMessage());
+            // Envia resposta vazia para indicar erro
+            out.writeObject(new FileBlockAnswerMessage(fileName, offset, new byte[0]));
+            out.flush();
+        }
+    }
+
+    // Ligação a outro nó manualmente
     public void connectToNode(String host, int port) {
         new Thread(() -> {
             try {
@@ -140,24 +199,6 @@ public class Node {
                     if (obj instanceof NewConnectionRequest reply) {
                         System.out.printf("[INFO] Ligação aceite por %s:%d%n", reply.getHost(), reply.getPort());
                         addPeer(host, port);
-                    } else if (obj instanceof WordSearchMessage wsm) {
-                        // Filtrar ficheiros próprios
-                        List<FileSearchResult> results = new ArrayList<>();
-                        for (Map.Entry<BigInteger, File> entry : files.entrySet()) {
-                            File f = entry.getValue();
-                            if (f.getName().contains(wsm.getSearchWord())) {
-                                // obter tamanho e informações
-                                results.add(new FileSearchResult(
-                                        wsm,
-                                        (int) f.length(),
-                                        f.getName(),
-                                        listenPort,
-                                        InetAddress.getLocalHost().getHostAddress()));
-                            }
-                        }
-                        // Envia lista (pode ser vazia)
-                        out.writeObject(results);
-                        out.flush();
                     } else {
                         System.err.println("[ERRO] Resposta inesperada: " + obj);
                     }
@@ -207,5 +248,16 @@ public class Node {
         // Aguarda respostas
         latch.await();
         return aggregated;
+    }
+
+    // Método público para recarregar arquivos do diretório
+    public synchronized void refreshFiles() {
+        // Limpar o mapa atual
+        files.clear();
+
+        // Recarregar os arquivos
+        readFiles();
+
+        System.out.println("[INFO] Lista de arquivos atualizada após download");
     }
 }
