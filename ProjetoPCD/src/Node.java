@@ -46,7 +46,7 @@ public class Node {
     }
 
     public boolean hasLocalFile(String fileName) {
-        // Verifica em todos os arquivos do mapa se existe algum com o nome especificado
+        // Verifica em todos os ficheiros do mapa se existe algum com o nome especificado
         for (File file : files.values()) {
             if (file.getName().equals(fileName)) {
                 return true;
@@ -78,7 +78,7 @@ public class Node {
         }
     }
 
-    // ServerSocket e handshake de NewConnectionRequest
+    // ServerSocket e handshake
     private void startServer() throws IOException {
         ServerSocket server = new ServerSocket(listenPort);
         System.out.println("[INFO] Servidor iniciado na porta " + listenPort);
@@ -102,7 +102,7 @@ public class Node {
 
                 Object obj = in.readObject();
 
-                // Encaminhar para os métodos específicos conforme o tipo de mensagem
+                // Dependendo do tipo de mensagem recebida
                 if (obj instanceof NewConnectionRequest req) {
                     handleNewConnection(req, out);
                 } else if (obj instanceof WordSearchMessage wsm) {
@@ -118,7 +118,7 @@ public class Node {
         }).start();
     }
 
-    // Método específico para lidar com pedido de nova conexão
+    // Lida com requests de NewConnectionRequest
     private void handleNewConnection(NewConnectionRequest req, ObjectOutputStream out) throws IOException {
         System.out.printf("[INFO] Pedido de ligação de %s:%d%n", req.getHost(), req.getPort());
         // Responde com os mesmos dados para confirmar
@@ -130,7 +130,7 @@ public class Node {
         System.out.println("[INFO] Ligação estabelecida com sucesso.");
     }
 
-    // Método específico para lidar com pedido de pesquisa
+    // Lida com requests de WordSearchMessage
     private void handleWordSearch(WordSearchMessage wsm, ObjectOutputStream out) throws IOException {
         // Pesquisa ficheiros locais e responde com a lista de resultados
         List<FileSearchResult> results = new ArrayList<>();
@@ -150,12 +150,13 @@ public class Node {
         System.out.println("[INFO] Pesquisa recebida e respondida.");
     }
 
+    // Lida com pedidos de FileBlockRequestMessage
     private void handleBlockRequest(FileBlockRequestMessage request, ObjectOutputStream out) throws IOException {
         String fileName = request.getFileName();
         long offset = request.getOffset();
         int length = request.getLength();
 
-        // Procura o ficheiro localmente
+        // Procura o ficheiro
         File requestedFile = null;
         for (File file : files.values()) {
             if (file.getName().equals(fileName)) {
@@ -173,13 +174,13 @@ public class Node {
         }
 
         try {
-            // Le o bloco solicitado
+            // Lê o bloco solicitado
             byte[] data = new byte[length];
             try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(requestedFile, "r")) {
                 raf.seek(offset);
                 int bytesRead = raf.read(data, 0, length);
 
-                // Se leu menos bytes que o solicitadom ajusta o array
+                // Se leu menos bytes que o solicitado ajusta o array
                 if (bytesRead < length) {
                     byte[] trimmedData = new byte[bytesRead];
                     System.arraycopy(data, 0, trimmedData, 0, bytesRead);
@@ -235,7 +236,7 @@ public class Node {
         return files;
     }
 
-    // Método de pesquisa remota
+    // Pesquisa de ficheiros
     public List<FileSearchResult> searchFiles(String keyword) throws InterruptedException {
         WordSearchMessage msg = new WordSearchMessage(keyword);
         int n = peers.size();
@@ -250,7 +251,7 @@ public class Node {
                     out.writeObject(msg);
                     out.flush();
 
-                    // Espera lista de resultados
+                    // Espera pela lista de resultados
                     Object resp = in.readObject();
                     if (resp instanceof List<?> list) {
                         for (Object o : list) {
@@ -260,25 +261,20 @@ public class Node {
                         }
                     }
                 } catch (IOException | ClassNotFoundException e) {
-                    System.err.println("Erro a contactar peer " + peer + ": " + e.getMessage());
+                    System.err.println("Erro ao comunicar com o peer " + peer + ": " + e.getMessage());
                 } finally {
                     latch.countDown();
                 }
             }).start();
         }
-        // Aguarda respostas
+        // Espera pelas respostas
         latch.await();
         return aggregated;
     }
 
-    // Método público para recarregar arquivos do diretório
+    // Método para recarregar ficheiros do diretório
     public synchronized void refreshFiles() {
-        // Limpar o mapa atual
         files.clear();
-
-        // Recarregar os arquivos
         readFiles();
-
-        System.out.println("[INFO] Lista de arquivos atualizada após download");
     }
 }

@@ -22,7 +22,7 @@ public class IscTorrent {
 
     private Node node;
 
-    // Armazenar resultados da última pesquisa
+    // Guardar resultados da última pesquisa
     private List<FileSearchResult> lastSearchResults = new ArrayList<>();
 
     public IscTorrent(int port, String workDir) throws IOException {
@@ -117,10 +117,10 @@ public class IscTorrent {
                 // Obtém todos os resultados da pesquisa
                 List<FileSearchResult> allResults = node.searchFiles(keyword);
 
-                // Filtra os resultados, excluindo arquivos que já existem localmente
+                // Filtra os resultados, excluindo ficheiros que o node ja contém
                 List<FileSearchResult> filteredResults = new ArrayList<>();
                 for (FileSearchResult result : allResults) {
-                    // Adiciona apenas arquivos que NÃO existem localmente
+                    // Adiciona apenas ficheiros que NÃO existem localmente no Node
                     if (!node.hasLocalFile(result.getFileName())) {
                         filteredResults.add(result);
                     }
@@ -153,18 +153,17 @@ public class IscTorrent {
         int[] selectedIndices = resultList.getSelectedIndices();
 
         if (selectedIndices.length == 0) {
-            JOptionPane.showMessageDialog(frame, "Selecione pelo menos um arquivo para download",
+            JOptionPane.showMessageDialog(frame, "Selecione pelo menos um ficheiro para download",
                     "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        // Para cada índice selecionado
+        // Remover o <numero>
         for (int selectedIndex : selectedIndices) {
             String selectedItem = listModel.getElementAt(selectedIndex);
-            // Remove o <numero> do final
             String fileName = selectedItem.substring(0, selectedItem.lastIndexOf('<')).trim();
 
-            // Procura por todos os peers que têm o arquivo
+            // Procura por todos os peers que têm o ficheiro
             List<FileSearchResult> sources = new ArrayList<>();
             for (FileSearchResult result : lastSearchResults) {
                 if (result.getFileName().equals(fileName)) {
@@ -174,15 +173,15 @@ public class IscTorrent {
 
             if (sources.isEmpty()) {
                 JOptionPane.showMessageDialog(frame,
-                        "Nenhuma fonte disponível para o arquivo: " + fileName,
+                        "Nenhuma fonte disponível para o ficheiro: " + fileName,
                         "Aviso", JOptionPane.WARNING_MESSAGE);
-                continue; // Pula para o próximo arquivo
+                continue; // Slta para o próximo ficheiro
             }
 
             // Usa o tamanho do primeiro resultado encontrado 
             long fileSize = sources.get(0).getFileSize();
 
-            // Inicia o download em thread separada
+            // Inicia o download numa thread separada
             final String finalFileName = fileName;
             new Thread(() -> {
                 System.out.println("[INFO] Iniciando download de " + finalFileName);

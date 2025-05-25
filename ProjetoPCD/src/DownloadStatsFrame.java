@@ -32,7 +32,7 @@ public class DownloadStatsFrame {
         // Informações básicas
         panel.add(new JLabel("Download completo!"));
         panel.add(Box.createVerticalStrut(5));
-        panel.add(new JLabel("Arquivo: " + fileName));
+        panel.add(new JLabel("Ficheiro: " + fileName));
         panel.add(new JLabel("Tamanho: " + fileSize + " bytes"));
         panel.add(new JLabel("Tempo: " + (elapsedTime / 1000.0) + " segundos"));
         panel.add(Box.createVerticalStrut(10));
@@ -76,7 +76,7 @@ public class DownloadStatsFrame {
     public String getStatsString() {
         StringBuilder sb = new StringBuilder();
         sb.append("Download completo!\n");
-        sb.append("Arquivo: ").append(fileName).append("\n");
+        sb.append("Ficheiro: ").append(fileName).append("\n");
         sb.append("Tamanho: ").append(fileSize).append(" bytes\n");
         sb.append("Tempo: ").append(elapsedTime / 1000.0).append(" segundos\n\n");
         sb.append("Blocos por peer:\n");

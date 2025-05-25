@@ -26,7 +26,7 @@ public class DownloadTaskManager {
     private Map<String, Integer> peersBlockCount;
     private boolean downloading = false;
 
-    // Cadeado e variáveis condicionais para coordenação
+    // Cadeado e variáveis condicionais
     private final Lock lock = new ReentrantLock();
     private final Condition downloadCompleteCondition = lock.newCondition();
     private int totalBlocks = 0;
@@ -73,7 +73,7 @@ public class DownloadTaskManager {
                 new Thread(() -> downloadFromPeer(source)).start();
             }
 
-            // Cria thread para escrever o arquivo quando completo
+            // Cria thread para escrever o ficheiro quando completo
             new Thread(this::waitAndWrite).start();
         } finally {
             lock.unlock();
@@ -95,13 +95,9 @@ public class DownloadTaskManager {
 
             long elapsed = System.currentTimeMillis() - startTime;
 
-            // Escreve o ficheiro no disco
             writeFileToDisk();
-
-            // Exibe as estatísticas
             showDownloadStatistics(elapsed);
 
-            // Reset do estado
             downloading = false;
 
         } finally {
@@ -112,7 +108,7 @@ public class DownloadTaskManager {
     private void writeFileToDisk() {
         File file = new File(workDir, fileName);
         try (FileOutputStream fos = new FileOutputStream(file)) {
-            // Escreve os blocos na ordem correta
+            // Escreve os blocos pela ordem correta
             for (int i = 0; i < totalBlocks; i++) {
                 byte[] data = downloadedBlocks.get(i);
                 if (data != null) {
@@ -127,7 +123,7 @@ public class DownloadTaskManager {
     }
 
     private void showDownloadStatistics(long elapsed) {
-        // Apenas cria e chama o frame, sem lógica de formatação
+        // Apenas cria e chama o frame (formatação tratada no DownloadStatsFrame)
         javax.swing.SwingUtilities.invokeLater(() -> {
             DownloadStatsFrame statsFrame = new DownloadStatsFrame(fileName, fileSize, elapsed, peersBlockCount);
             statsFrame.show();
@@ -139,7 +135,7 @@ public class DownloadTaskManager {
 
         try {
             while (true) {
-                // Pega no proximo bloco para download, de forma sincronizada
+                // Pega no proximo bloco para download com lock
                 FileBlockRequestMessage block;
 
                 lock.lock();
@@ -168,7 +164,7 @@ public class DownloadTaskManager {
                         // Marca um bloco como concluído
                         completedBlocks++;
 
-                        // Se todos os blocos foram transferidos, sinaliza a condição
+                        // Se todos os blocos tiverem sido transferidos, sinaliza a condição
                         if (completedBlocks >= totalBlocks) {
                             downloadCompleteCondition.signal();
                         }
@@ -177,9 +173,9 @@ public class DownloadTaskManager {
                     }
 
                 } catch (IOException | ClassNotFoundException e) {
-                    System.err.println("[ERRO] Falha ao baixar bloco de " + peerKey + ": " + e.getMessage());
+                    System.err.println("[ERRO] Falha ao transferir bloco de " + peerKey + ": " + e.getMessage());
 
-                    // Devolve o bloco à lista para ser tentado por outro peer
+                    // Devolve o bloco à lista para se tentar transferir através de outro peer
                     lock.lock();
                     try {
                         pendingBlocks.add(block);
@@ -196,7 +192,7 @@ public class DownloadTaskManager {
     }
 
     private byte[] requestBlockFromPeer(FileSearchResult source, FileBlockRequestMessage block) throws IOException, ClassNotFoundException {
-        // Estabelece conexão com o peer
+        // Estabelece ligação com o peer
         try (Socket socket = new Socket(source.getHostName(), source.getOriginPort()); ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream()); ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) {
 
             // Envia pedido do bloco
