@@ -28,13 +28,6 @@ public class IscTorrent {
     public IscTorrent(int port, String workDir) throws IOException {
         File workDirFile = new File(workDir);
 
-        // Se for um caminho relativo, tenta ajustá-lo à raiz do projeto
-        if (!workDirFile.isAbsolute()) {
-            // Sobe da pasta onde o Java está a correr para a raiz do projeto
-            File projectRoot = new File(System.getProperty("user.dir")).getParentFile();
-            workDirFile = new File(projectRoot, workDir);
-        }
-
         String absoluteWorkDir = workDirFile.getCanonicalPath();
 
         if (!workDirFile.exists() || !workDirFile.isDirectory()) {
@@ -148,6 +141,7 @@ public class IscTorrent {
         }).start();
     }
 
+    @SuppressWarnings("unchecked")
     public void downloadFiles() {
         JList<String> resultList = (JList<String>) ((JScrollPane) bottomPanel.getComponent(0)).getViewport().getView();
         int[] selectedIndices = resultList.getSelectedIndices();
@@ -197,11 +191,19 @@ public class IscTorrent {
             System.exit(1);
         }
         int port = Integer.parseInt(args[0]);
-        String folder = args[1];
+        String folderArg = args[1];
+
+        // Se o caminho for relativo (ex: "dl1"), assume-se que está dentro da pasta "ProjetoPCD"
+        // em relação ao diretório de execução.
+        String workDirPath = folderArg;
+        if (!new File(workDirPath).isAbsolute()) {
+            workDirPath = "ProjetoPCD" + File.separator + folderArg;
+        }
+        final String finalWorkDir = workDirPath;
 
         SwingUtilities.invokeLater(() -> {
             try {
-                IscTorrent iscTorrent = new IscTorrent(port, folder);
+                IscTorrent iscTorrent = new IscTorrent(port, finalWorkDir);
                 iscTorrent.open();
             } catch (IOException e) {
                 e.printStackTrace();
